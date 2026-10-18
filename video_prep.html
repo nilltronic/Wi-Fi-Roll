@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prank video prep for ESP8266</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { font-family: Arial, Helvetica, sans-serif; background: #111; color: #eee; margin: 0 auto; padding: 18px; max-width: 760px; line-height: 1.4; }
+h1 { font-size: 24px; margin: 6px 0 4px; }
+h2 { font-size: 15px; margin: 0 0 10px; color: #9cf; }
+.sub { color: #aaa; margin: 0 0 18px; font-size: 14px; }
+.card { background: #222; border-radius: 10px; padding: 14px; margin: 12px 0; }
+.drop { text-align: center; padding: 30px 14px; border: 2px dashed #444; background: #1a1a1a; }
+.drop.over { border-color: #3a7bd5; background: #1d2633; }
+.row { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+.row label { width: 110px; color: #ccc; font-size: 14px; }
+.row input[type=range] { flex: 1; min-width: 160px; }
+.val { width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
+select, input[type=text] { background: #111; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 8px; font-size: 14px; }
+input[type=text] { width: 230px; }
+button, a.btn { display: inline-block; background: #3a7bd5; color: #fff; border: 0; border-radius: 6px; padding: 9px 16px; font-size: 14px; cursor: pointer; text-decoration: none; }
+button.small { padding: 6px 10px; font-size: 13px; background: #34445c; }
+button:disabled { opacity: .5; cursor: default; }
+video { width: 100%; max-height: 360px; background: #000; border-radius: 8px; }
+progress { width: 100%; height: 14px; margin-top: 10px; }
+.status { margin: 8px 0 0; font-size: 14px; color: #ccc; min-height: 20px; }
+.status.err { color: #ff8a80; }
+.hint { color: #999; font-size: 12px; margin: 6px 0 0; }
+.warn { color: #f5b041; }
+pre { background: #0b0b0b; border-radius: 8px; padding: 10px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; margin: 8px 0; }
+details { margin: 12px 0; }
+summary { cursor: pointer; color: #9cf; font-size: 14px; }
+.big { padding: 12px 22px; font-size: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Prank video prep</h1>
+<p class="sub">Trim a clip and shrink it for the ESP8266, all in your browser. Your video is never uploaded anywhere.</p>
+
+<div id="drop" class="card drop">
+  <p style="margin:0 0 10px">Drop a video here, or</p>
+  <button id="btnChoose">Choose a video file</button>
+  <input type="file" id="fileInput" accept="video/*,.mp4,.mov,.m4v,.mkv,.webm" hidden>
+  <p class="hint" id="fileName">MP4 works best. Any length is fine; you pick the part you want.</p>
+</div>
+
+<div id="editor" hidden>
+
+  <div class="card">
+    <video id="vid" controls playsinline></video>
+  </div>
+
+  <div class="card">
+    <h2>1. Trim</h2>
+    <div class="row">
+      <label for="startRange">Start</label>
+      <input type="range" id="startRange" min="0" max="10" step="0.05" value="0">
+      <span class="val" id="startLbl">0.0 s</span>
+      <button class="small" id="btnSetStart" title="Use the current position of the video above">Set to now</button>
+    </div>
+    <div class="row">
+      <label for="endRange">End</label>
+      <input type="range" id="endRange" min="0" max="10" step="0.05" value="8">
+      <span class="val" id="endLbl">8.0 s</span>
+      <button class="small" id="btnSetEnd" title="Use the current position of the video above">Set to now</button>
+    </div>
+    <div class="row">
+      <label>Clip length</label>
+      <span id="lenLbl">8.0 s</span>
+      <button class="small" id="btnPreview">Preview the clip</button>
+    </div>
+    <p class="hint">Tip: scrub the video above, then press &ldquo;Set to now&rdquo; to mark the start and end.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Shrink</h2>
+    <div class="row">
+      <label for="selWidth">Width</label>
+      <select id="selWidth">
+        <option value="240">240 px (tiny)</option>
+        <option value="320" selected>320 px (recommended)</option>
+        <option value="400">400 px</option>
+        <option value="480">480 px (bigger file)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="selFps">Frame rate</label>
+      <select id="selFps">
+        <option value="10">10 fps</option>
+        <option value="12">12 fps</option>
+        <option value="15" selected>15 fps (recommended)</option>
+        <option value="20">20 fps</option>
+        <option value="24">24 fps</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="rngCrf">Compression</label>
+      <input type="range" id="rngCrf" min="22" max="36" step="1" value="28">
+      <span class="val" id="crfLbl">28</span>
+    </div>
+    <p class="hint" style="margin-top:-2px">Higher number = smaller file, softer picture. 28 is a good start.</p>
+    <div class="row">
+      <label for="selAudio">Audio</label>
+      <select id="selAudio">
+        <option value="48" selected>Mono, 48 kbps (recommended)</option>
+        <option value="32">Mono, 32 kbps (smaller)</option>
+        <option value="64">Mono, 64 kbps (clearer)</option>
+        <option value="none">No audio</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="outName">File name</label>
+      <input type="text" id="outName" value="rickroll.mp4" maxlength="31" spellcheck="false">
+    </div>
+    <p class="hint">The device needs a name ending in .mp4, up to 31 letters, digits, dots, dashes or underscores.</p>
+  </div>
+
+  <div class="card">
+    <button id="btnGo" class="big">Trim &amp; shrink</button>
+    <progress id="bar" max="1" value="0" hidden></progress>
+    <p class="status" id="status"></p>
+  </div>
+
+  <div class="card" id="result" hidden>
+    <h2>Done</h2>
+    <video id="outVid" controls loop playsinline></video>
+    <p id="outInfo" class="status"></p>
+    <p class="hint" id="outWarn"></p>
+    <a class="btn" id="btnDownload" href="#" download="rickroll.mp4">Download</a>
+    <p class="hint">Then open the ESP8266 admin page, use &ldquo;Add a video&rdquo; to upload it, and choose &ldquo;Use selected&rdquo;.</p>
+  </div>
+
+  <details>
+    <summary>Command-line version (if the in-browser converter does not work for you)</summary>
+    <pre id="cmd"></pre>
+    <button class="small" id="btnCopy">Copy command</button>
+    <p class="hint">Run this in a Command Prompt in the folder containing your video. It produces the same result and needs ffmpeg installed.</p>
+  </details>
+
+  <details>
+    <summary>Converter log</summary>
+    <pre id="log">(nothing yet)</pre>
+  </details>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- settings ----------
+  var CORE_VERSION = "0.12.6";
+  var CORE_BASES = [
+    "https://unpkg.com/@ffmpeg/core@" + CORE_VERSION + "/dist/umd/",
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@" + CORE_VERSION + "/dist/umd/"
+  ];
+  var WASM_BYTES = 32129114;     // size of ffmpeg-core.wasm (used for the download progress bar)
+  var DEFAULT_CLIP = 8;          // seconds
+  var LONG_CLIP = 15;            // warn above this
+  var BIG_OUTPUT_KB = 2000;      // warn above this
+
+  // ---------- state ----------
+  var file = null, srcUrl = null, outUrl = null;
+  var duration = 0, start = 0, end = 0, previewing = false;
+  var worker = null, workerReady = false, loading = null, pending = null;
+  var clipDur = 1;
+  var logLines = [];
+
+  var vid = $("vid");
+
+  // ---------- helpers ----------
+  function fmt(s) { return s.toFixed(1) + " s"; }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function cleanOutName(raw) {
+    var n = String(raw || "").trim().replace(/\.(mov|m4v|mkv|webm|avi)$/i, "").replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
+    if (!/\.mp4$/i.test(n)) n = n.replace(/\.+$/, "") + ".mp4";
+    if (n.length > 31) n = n.slice(0, 27) + ".mp4";
+    if (n.toLowerCase() === ".mp4") n = "rickroll.mp4";
+    return n;
+  }
+
+  function settings() {
+    return {
+      start: start,
+      dur: end - start,
+      width: parseInt($("selWidth").value, 10),
+      fps: parseInt($("selFps").value, 10),
+      crf: parseInt($("rngCrf").value, 10),
+      audio: $("selAudio").value
+    };
+  }
+
+  // Same options the command-line version uses.
+  function buildArgs(inName, outName, s, overwrite) {
+    var a = ["-ss", s.start.toFixed(2), "-t", s.dur.toFixed(2), "-i", inName,
+             "-vf", "scale=" + s.width + ":-2", "-r", String(s.fps),
+             "-c:v", "libx264", "-preset", "veryfast", "-crf", String(s.crf),
+             "-profile:v", "main", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
+    if (s.audio === "none") a.push("-an");
+    else a.push("-c:a", "aac", "-ac", "1", "-b:a", s.audio + "k");
+    if (overwrite) a.push("-y");
+    a.push(outName);
+    return a;
+  }
+
+  function quote(x) { return /[^\w.:\/\\=+-]/.test(x) ? '"' + x + '"' : x; }
+
+  function updateCmd() {
+    if (!file) return;
+    var args = buildArgs(file.name, cleanOutName($("outName").value), settings(), false);
+    $("cmd").textContent = "ffmpeg " + args.map(quote).join(" ");
+  }
+
+  function setStatus(msg, isErr) {
+    var el = $("status");
+    el.textContent = msg || "";
+    el.className = "status" + (isErr ? " err" : "");
+  }
+
+  function setBar(p) {
+    var bar = $("bar");
+    bar.hidden = (p === null);
+    if (p !== null) bar.value = p;
+  }
+
+  function addLog(line) {
+    logLines.push(line);
+    if (logLines.length > 300) logLines.shift();
+    $("log").textContent = logLines.join("\n");
+  }
+
+  // ---------- trim UI ----------
+  function minGap() { return Math.min(0.5, duration / 2); }
+
+  function syncTrim() {
+    $("startRange").value = start;
+    $("endRange").value = end;
+    $("startLbl").textContent = fmt(start);
+    $("endLbl").textContent = fmt(end);
+    var len = end - start;
+    var lbl = $("lenLbl");
+    lbl.textContent = fmt(len) + (len > LONG_CLIP ? "  (long clips make big files)" : "");
+    lbl.className = len > LONG_CLIP ? "warn" : "";
+    updateCmd();
+  }
+
+  function setStart(v) {
+    start = clamp(v, 0, duration - minGap());
+    if (end < start + minGap()) end = Math.min(duration, start + minGap());
+    syncTrim();
+  }
+
+  function setEnd(v) {
+    end = clamp(v, minGap(), duration);
+    if (start > end - minGap()) start = Math.max(0, end - minGap());
+    syncTrim();
+  }
+
+  $("startRange").addEventListener("input", function () {
+    setStart(parseFloat(this.value));
+    previewing = false;
+    vid.currentTime = start;
+  });
+  $("endRange").addEventListener("input", function () {
+    setEnd(parseFloat(this.value));
+    previewing = false;
+    vid.currentTime = Math.max(start, end - 0.1);
+  });
+  $("btnSetStart").addEventListener("click", function () { setStart(vid.currentTime); });
+  $("btnSetEnd").addEventListener("click", function () { setEnd(vid.currentTime); });
+
+  $("btnPreview").addEventListener("click", function () {
+    vid.currentTime = start;
+    previewing = true;
+    var p = vid.play();
+    if (p && p.catch) p.catch(function () {});
+  });
+  vid.addEventListener("timeupdate", function () {
+    if (previewing && vid.currentTime >= end) {
+      vid.pause();
+      previewing = false;
+    }
+  });
+
+  ["selWidth", "selFps", "selAudio", "outName"].forEach(function (id) {
+    $(id).addEventListener("input", updateCmd);
+    $(id).addEventListener("change", updateCmd);
+  });
+  $("outName").addEventListener("change", function () { this.value = cleanOutName(this.value); updateCmd(); });
+  $("rngCrf").addEventListener("input", function () { $("crfLbl").textContent = this.value; updateCmd(); });
+
+  // ---------- loading a file ----------
+  function loadFile(f) {
+    if (!f) return;
+    file = f;
+    if (srcUrl) URL.revokeObjectURL(srcUrl);
+    srcUrl = URL.createObjectURL(f);
+    previewing = false;
+    $("result").hidden = true;
+    setStatus("");
+    setBar(null);
+    $("fileName").textContent = f.name + "  (" + (f.size / 1048576).toFixed(1) + " MB)";
+
+    vid.onloadedmetadata = function () {
+      if (!isFinite(vid.duration) || vid.duration <= 0) { vid.onerror(); return; }
+      duration = vid.duration;
+      var max = duration.toFixed(2);
+      $("startRange").max = max;
+      $("endRange").max = max;
+      start = 0;
+      end = Math.min(duration, DEFAULT_CLIP);
+      $("editor").hidden = false;
+      syncTrim();
+    };
+    vid.onerror = function () {
+      $("editor").hidden = true;
+      $("fileName").textContent = f.name + ": this browser cannot read that video, so it cannot be previewed. Try an MP4 (H.264) or WebM file.";
+    };
+    vid.src = srcUrl;
+  }
+
+  $("btnChoose").addEventListener("click", function () { $("fileInput").click(); });
+  $("fileInput").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (f) loadFile(f);
+  });
+  var drop = $("drop");
+  drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+  drop.addEventListener("drop", function (e) {
+    e.preventDefault();
+    drop.classList.remove("over");
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+
+  // ---------- converter (ffmpeg.wasm core running in a Web Worker) ----------
+  // The worker is created from a Blob so this page works as a plain local file.
+  var WORKER_SRC = [
+    "var core = null;",
+    "self.onmessage = async function (e) {",
+    "  var m = e.data;",
+    "  try {",
+    "    if (m.type === 'load') {",
+    "      importScripts(m.coreURL);",
+    "      core = await self.createFFmpegCore({ wasmBinary: new Uint8Array(m.wasm) });",
+    "      core.setLogger(function (l) { self.postMessage({ type: 'log', message: l.message }); });",
+    "      core.setProgress(function (p) { self.postMessage({ type: 'progress', time: p.time }); });",
+    "      self.postMessage({ type: 'loaded' });",
+    "    } else if (m.type === 'run') {",
+    "      core.FS.writeFile('input', m.data);",
+    "      core.setTimeout(-1);",
+    "      core.exec.apply(core, m.args);",
+    "      var ret = core.ret;",
+    "      core.reset();",
+    "      var out = null;",
+    "      if (ret === 0) out = core.FS.readFile(m.output);",
+    "      try { core.FS.unlink('input'); } catch (x) {}",
+    "      try { core.FS.unlink(m.output); } catch (x) {}",
+    "      self.postMessage({ type: 'done', ret: ret, out: out }, out ? [out.buffer] : []);",
+    "    }",
+    "  } catch (err) {",
+    "    self.postMessage({ type: 'error', message: String((err && err.message) || err) });",
+    "  }",
+    "};"
+  ].join("\n");
+
+  function onWorkerMessage(e) {
+    var m = e.data, p;
+    if (m.type === "log") {
+      addLog(m.message);
+    } else if (m.type === "progress") {
+      var frac = clamp((m.time / 1e6) / clipDur, 0, 1);
+      setBar(frac);
+      setStatus("Trimming and shrinking... " + Math.round(frac * 100) + "%");
+    } else if (m.type === "loaded" || m.type === "done") {
+      p = pending; pending = null;
+      if (p) p.resolve(m);
+    } else if (m.type === "error") {
+      p = pending; pending = null;
+      if (p) p.reject(new Error(m.message));
+    }
+  }
+
+  function callWorker(msg, transfer) {
+    return new Promise(function (resolve, reject) {
+      pending = { resolve: resolve, reject: reject };
+      worker.postMessage(msg, transfer || []);
+    });
+  }
+
+  function fetchCore(url, onProgress) {
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status + " from " + url);
+      if (!onProgress) return r.text();
+      if (!r.body || !r.body.getReader) return r.arrayBuffer().then(function (b) { return new Uint8Array(b); });
+      var reader = r.body.getReader(), chunks = [], got = 0;
+      function pump() {
+        return reader.read().then(function (res) {
+          if (res.done) return;
+          chunks.push(res.value);
+          got += res.value.length;
+          onProgress(Math.min(1, got / WASM_BYTES));
+          return pump();
+        });
+      }
+      return pump().then(function () {
+        var out = new Uint8Array(got), o = 0;
+        chunks.forEach(function (c) { out.set(c, o); o += c.length; });
+        return out;
+      });
+    });
+  }
+
+  function ensureEngine() {
+    if (workerReady) return Promise.resolve();
+    if (loading) return loading;
+
+    loading = (async function () {
+      var lastErr = null;
+      for (var i = 0; i < CORE_BASES.length; i++) {
+        var base = CORE_BASES[i];
+        try {
+          setStatus("Downloading the converter (about 30 MB, first time only)...");
+          setBar(0);
+          var js = await fetchCore(base + "ffmpeg-core.js", null);
+          var wasm = await fetchCore(base + "ffmpeg-core.wasm", function (p) {
+            setBar(p);
+            setStatus("Downloading the converter (about 30 MB, first time only)... " + Math.round(p * 100) + "%");
+          });
+          setStatus("Starting the converter...");
+          var coreURL = URL.createObjectURL(new Blob([js], { type: "text/javascript" }));
+          var workerURL = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
+          worker = new Worker(workerURL);
+          worker.onmessage = onWorkerMessage;
+          worker.onerror = function (ev) {
+            var p = pending; pending = null;
+            if (p) p.reject(new Error(ev.message || "The converter crashed"));
+          };
+          await callWorker({ type: "load", coreURL: coreURL, wasm: wasm.buffer }, [wasm.buffer]);
+          workerReady = true;
+          return;
+        } catch (err) {
+          lastErr = err;
+          if (worker) { worker.terminate(); worker = null; }
+        }
+      }
+      loading = null;
+      throw lastErr || new Error("Could not load the converter");
+    })();
+
+    return loading;
+  }
+
+  // ---------- convert ----------
+  async function convert() {
+    if (!file) return;
+    var btn = $("btnGo");
+    btn.disabled = true;
+    $("result").hidden = true;
+    logLines = [];
+    $("log").textContent = "(nothing yet)";
+
+    try {
+      await ensureEngine();
+
+      var s = settings();
+      var outName = cleanOutName($("outName").value);
+      $("outName").value = outName;
+      clipDur = Math.max(0.1, s.dur);
+
+      setBar(0);
+      setStatus("Reading the video...");
+      var data = new Uint8Array(await file.arrayBuffer());
+
+      setStatus("Trimming and shrinking... 0%");
+      var res = await callWorker(
+        { type: "run", data: data, args: buildArgs("input", "output.mp4", s, true), output: "output.mp4" },
+        [data.buffer]
+      );
+      if (res.ret !== 0 || !res.out) {
+        throw new Error("ffmpeg could not process this file (code " + res.ret + "). The converter log below may say why.");
+      }
+
+      var blob = new Blob([res.out], { type: "video/mp4" });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+
+      $("outVid").src = outUrl;
+      $("btnDownload").href = outUrl;
+      $("btnDownload").download = outName;
+      var kb = Math.round(blob.size / 1024);
+      $("outInfo").textContent = outName + ": " + kb + " KB, " + fmt(s.dur) + ", " + s.width + " px wide, " + s.fps + " fps";
+      $("outWarn").textContent = kb > BIG_OUTPUT_KB
+        ? "That is on the big side for the ESP8266. A narrower width, a higher compression number, mono 32 kbps audio or a shorter clip will shrink it."
+        : "";
+      $("result").hidden = false;
+      setBar(null);
+      setStatus("");
+      $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (err) {
+      setBar(null);
+      setStatus("Something went wrong: " + (err && err.message ? err.message : err) +
+                "  You can use the command-line version below instead.", true);
+      $("editor").querySelector("details").open = true;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $("btnGo").addEventListener("click", convert);
+
+  // ---------- copy command ----------
+  $("btnCopy").addEventListener("click", function () {
+    var text = $("cmd").textContent;
+    var done = function () { $("btnCopy").textContent = "Copied"; setTimeout(function () { $("btnCopy").textContent = "Copy command"; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else {
+      fallbackCopy(text); done();
+    }
+  });
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+})();
+</script>
+</body>
+</html>
