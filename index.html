@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wi-Fi-Roll</title>
 <style>
+:root { color-scheme: dark; }
 body {
   font-family: monospace;
-  background: #eb0c0c;
-  color: #faf7f7;
+  background: #111;
+  color: #eee;
   margin: 0;
   padding: 24px 16px 60px;
   display: flex;
@@ -24,6 +25,7 @@ p.sub {
   max-width: 480px;
   margin: 0 auto 32px;
   line-height: 1.5;
+  color: #aaa;
 }
 .menu {
   display: flex;
@@ -34,25 +36,36 @@ p.sub {
 }
 .menu a {
   display: block;
-  background: #faf7f7;
-  border: 2px solid #0f380f;
-  border-radius: 6px;
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 10px;
   padding: 16px 18px;
-  color: #700b03;
+  color: #eee;
   text-decoration: none;
 }
-.menu a:hover {
-  background: #700b03; 
-  color: #faf7f7; 
+.menu a:hover,
+.menu a:focus-visible {
+  background: #3a7bd5;
+  border-color: #3a7bd5;
+  color: #fff;
+  outline: none;
 }
 .menu .label {
   font-weight: bold;
   font-size: 15px;
   margin-bottom: 4px;
+  color: #9cf;
 }
 .menu .desc {
   font-size: 12px;
   line-height: 1.4;
+  color: #aaa;
+}
+.menu a:hover .label,
+.menu a:hover .desc,
+.menu a:focus-visible .label,
+.menu a:focus-visible .desc {
+  color: #fff;
 }
 footer {
   margin-top: 40px;
@@ -60,6 +73,7 @@ footer {
   text-align: center;
   max-width: 400px;
   line-height: 1.5;
+  color: #999;
 }
 </style>
 </head>
