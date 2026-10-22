@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wi-Fi-Roll - Video Gallery</title>
+<style>
+:root { color-scheme: dark; }
+body {
+  font-family: monospace;
+  background: #111;
+  color: #eee;
+  margin: 0;
+  padding: 24px 16px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+h1 { text-align: center; margin: 0 0 6px; }
+p.sub {
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto 20px;
+  line-height: 1.5;
+  color: #aaa;
+}
+.nav { margin-bottom: 24px; font-size: 13px; }
+.nav a { color: #9cf; text-decoration: none; }
+.nav a:hover, .nav a:focus-visible { color: #fff; text-decoration: underline; outline: none; }
+
+.tools {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.tools input {
+  flex: 1;
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #eee;
+  font-family: monospace;
+  font-size: 13px;
+}
+.tools input:focus { outline: none; border-color: #3a7bd5; }
+
+.grid {
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.card {
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card:hover { border-color: #3a7bd5; }
+.card video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  display: block;
+}
+.info { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.title { font-weight: bold; font-size: 15px; color: #9cf; word-break: break-word; }
+.desc { font-size: 12px; line-height: 1.4; color: #aaa; }
+.meta { font-size: 11px; color: #999; }
+.btn {
+  margin-top: 8px;
+  display: block;
+  text-align: center;
+  background: #3a7bd5;
+  border: 2px solid #3a7bd5;
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: #fff;
+  text-decoration: none;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+}
+.btn:hover, .btn:focus-visible { background: #2f6bc0; border-color: #9cf; outline: none; }
+
+.status { text-align: center; color: #aaa; line-height: 1.6; max-width: 420px; font-size: 13px; }
+.status code { color: #9cf; }
+footer {
+  margin-top: 40px;
+  font-size: 11px;
+  text-align: center;
+  max-width: 400px;
+  line-height: 1.5;
+  color: #999;
+}
+</style>
+</head>
+<body>
+
+<h1>Video Gallery</h1>
+<p class="sub">Preview the videos, then download the ones you want for your Wi-Fi-Roll.</p>
+<div class="nav"><a href="index.html">&larr; Back to menu</a></div>
+
+<div class="tools">
+  <input id="search" type="search" placeholder="Filter videos..." aria-label="Filter videos">
+</div>
+
+<div id="grid" class="grid"></div>
+<p id="status" class="status">Loading videos...</p>
+
+<footer>Wi-Fi-Roll by nilltronic.</footer>
+
+<script>
+(function () {
+  // ---- Settings -----------------------------------------------------------
+  var VIDEO_DIR   = 'video/';                       // folder holding the mp4s
+  var MANIFEST    = 'video/videos.json';            // optional: titles/descriptions
+  var GITHUB_API  = 'https://api.github.com/repos/nilltronic/Wi-Fi-Roll/contents/video';
+  var EXTENSIONS  = /\.(mp4|webm|m4v|mov)$/i;
+  // -------------------------------------------------------------------------
+
+  var grid = document.getElementById('grid');
+  var statusEl = document.getElementById('status');
+  var search = document.getElementById('search');
+  var cards = [];
+
+  function prettyName(file) {
+    return file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  }
+  function fmtSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+  function setStatus(html) {
+    statusEl.innerHTML = html || '';
+    statusEl.style.display = html ? 'block' : 'none';
+  }
+
+  function addCard(v) {
+    var src = VIDEO_DIR + encodeURIComponent(v.file);
+    var card = document.createElement('div');
+    card.className = 'card';
+
+    var video = document.createElement('video');
+    video.controls = true;
+    video.preload = 'metadata';
+    video.playsInline = true;
+    video.src = src + '#t=0.1';          // shows first frame as the thumbnail
+
+    var info = document.createElement('div');
+    info.className = 'info';
+
+    var title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = v.title || prettyName(v.file);
+    info.appendChild(title);
+
+    if (v.desc) {
+      var d = document.createElement('div');
+      d.className = 'desc';
+      d.textContent = v.desc;
+      info.appendChild(d);
+    }
+
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = [v.file, fmtSize(v.size)].filter(Boolean).join(' · ');
+    info.appendChild(meta);
+
+    var a = document.createElement('a');
+    a.className = 'btn';
+    a.href = src;
+    a.setAttribute('download', v.file);
+    a.textContent = 'Download';
+    info.appendChild(a);
+
+    card.appendChild(video);
+    card.appendChild(info);
+    grid.appendChild(card);
+
+    // Only one video plays at a time
+    video.addEventListener('play', function () {
+      document.querySelectorAll('video').forEach(function (o) {
+        if (o !== video) o.pause();
+      });
+    });
+
+    cards.push({ el: card, text: (title.textContent + ' ' + (v.desc || '') + ' ' + v.file).toLowerCase() });
+
+    // Fill in the file size if we don't have it yet
+    if (!v.size) {
+      fetch(src, { method: 'HEAD' }).then(function (r) {
+        var len = parseInt(r.headers.get('content-length'), 10);
+        if (len) meta.textContent = [v.file, fmtSize(len)].join(' · ');
+      }).catch(function () {});
+    }
+  }
+
+  function render(list) {
+    grid.innerHTML = '';
+    cards = [];
+    if (!list.length) {
+      setStatus('No videos found yet. Add .mp4 files to the <code>video</code> folder.');
+      return;
+    }
+    list.forEach(addCard);
+    setStatus('');
+  }
+
+  // Try the manifest first (lets you set titles/descriptions);
+  // fall back to listing the video folder through the GitHub API.
+  function loadManifest() {
+    return fetch(MANIFEST, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('no manifest');
+      return r.json();
+    }).then(function (data) {
+      return data.map(function (v) {
+        return typeof v === 'string' ? { file: v } : v;
+      });
+    });
+  }
+  function loadFromGitHub() {
+    return fetch(GITHUB_API).then(function (r) {
+      if (!r.ok) throw new Error('api ' + r.status);
+      return r.json();
+    }).then(function (items) {
+      return items
+        .filter(function (i) { return i.type === 'file' && EXTENSIONS.test(i.name); })
+        .map(function (i) { return { file: i.name, size: i.size }; });
+    });
+  }
+
+  loadManifest()
+    .catch(loadFromGitHub)
+    .then(render)
+    .catch(function () {
+      setStatus('Could not load the video list. Add a <code>video/videos.json</code> file listing your videos.');
+    });
+
+  search.addEventListener('input', function () {
+    var q = search.value.trim().toLowerCase();
+    var shown = 0;
+    cards.forEach(function (c) {
+      var match = !q || c.text.indexOf(q) !== -1;
+      c.el.style.display = match ? '' : 'none';
+      if (match) shown++;
+    });
+    setStatus(shown || !cards.length ? '' : 'No videos match that filter.');
+  });
+})();
+</script>
+</body>
+</html>
