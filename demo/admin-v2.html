@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wi-Fi-Roll Admin (Version 2 demo)</title>
+<link rel="stylesheet" href="admin.css">
+</head><body>
+<h1>Wi-Fi-Roll Admin</h1>
+<div class="demo-note">Demo: nothing here is connected to a real device.</div>
+
+<h2>Stats</h2>
+<div class="stats"><div><b id="s">3</b><span>this session</span></div><div><b id="l">27</b><span>lifetime</span></div></div>
+<form method="POST" action="/admin/reset" onsubmit="return confirm('Reset session and lifetime counts to zero?')">
+<button class="red">Reset stats</button></form>
+
+<h2>Mode</h2>
+<details class="card"><summary>Mode <small>(Video prank)</small></summary>
+<form method="POST" action="/admin/mode">
+<label class="v"><input type="radio" name="mode" value="video" checked> Video prank <small>(captive portal + video)</small></label>
+<label class="v"><input type="radio" name="mode" value="spam"> SSID rotation <small>(cycles the network name through the list below)</small></label>
+<label class="v"><input type="radio" name="mode" value="beacon"> Experimental beacon spam <small style="color:#f5b041">(personal testing only - see below)</small></label>
+<div style="margin:6px 0 10px 24px"><small>Broadcasts many fake network names at once by sending raw Wi-Fi beacon frames (the technique used by the well-known <i>esp8266_beaconSpam</i> project), instead of running one real access point. Nothing can connect to any of them. <b>While this runs there is no web server and no admin access at all</b> - it needs a power cycle to start, and the only way back is pressing reset twice quickly (see above) or a power cycle after switching back here. Check the radio regulations where you are before using it.</small></div>
+<label class="v"><input type="radio" name="mode" value="annoy"> Experimental annoy-a-tron <small style="color:#f5b041">(personal testing only - see below)</small></label>
+<div style="margin:6px 0 10px 24px"><small>Beeps once at a random time between the minimum and maximum set in the Annoy-a-tron section near the bottom of this page, using light sleep between beeps to save some power - meant for battery or power-bank use. <b>While this runs there is no web server and no admin access at all</b> - it needs a power cycle to start, and the only way back is pressing reset twice quickly (see above) or a power cycle after switching back here.</small><br>
+<label><input type="checkbox" name="confirm" value="1"> I understand this disables admin access until recovery, and this is for my own testing only</label></div>
+<small>Broadcasting now: <b id="now">Free WiFi</b></small><br><button>Save mode</button></form></details>
+
+<h2>Network name (SSID)</h2>
+<form class="card" method="POST" action="/admin/ssid">
+<input type="text" name="ssid" maxlength="32" value="Free WiFi"><button>Save &amp; restart network</button><br>
+<small>Phones will drop off; reconnect to the new name and reload this page.</small></form>
+
+<h2>Prank video</h2>
+<form class="card" method="POST" action="/admin/videomode">
+<label class="v"><input type="radio" name="vmode" value="0" checked> Fixed <small>(always the one chosen below)</small></label>
+<label class="v"><input type="radio" name="vmode" value="1"> Random <small>(a different one for each new visitor)</small></label>
+<label class="v"><input type="radio" name="vmode" value="2"> Rotate <small>(cycles through them in order, one per visitor)</small></label>
+<button>Save</button></form>
+<form class="card" method="POST" action="/admin/video">
+<label class="v"><input type="radio" name="video" value="Rickroll.mp4" checked> Rickroll.mp4 <small>812 KB &middot; active</small></label>
+<label class="v"><input type="radio" name="video" value="Nyan.mp4"> Nyan.mp4 <small>640 KB</small></label>
+<button>Use selected</button>
+<button class="red" formaction="/admin/delete" onclick="return confirm('Delete the selected video?')">Delete selected</button>
+</form>
+
+<h2>Add a video</h2>
+<form class="card" method="POST" action="/admin/upload" enctype="multipart/form-data">
+<input type="file" name="f" accept="video/mp4,.mp4">
+<button>Upload</button><br>
+<small>.mp4 only, short filename. Small works best: ~320x180, 15 fps, H.264 + AAC mono.</small></form>
+
+<p><small>Storage: 1480 KB used of 1944 KB</small></p>
+
+<h2>Portal text</h2>
+<form class="card" method="POST" action="/admin/portal">
+<input type="text" name="heading" maxlength="60" placeholder="Heading" value="Wi-Fi Connected!">
+<input type="text" name="button" maxlength="40" placeholder="Button text" value="Continue to Wi-Fi">
+<button>Save</button> <button type="submit" name="reset" value="1" formnovalidate>Reset to default wording</button><br>
+<small>Shown on the captive-portal page before the video starts. Tapping the heading 5 times still opens this admin page, whatever it says.</small></form>
+
+<h2>Rotation names</h2>
+<details class="card"><summary>Edit names <small>(3 of 30 set)</small></summary>
+<form id="rot" method="POST" action="/admin/spam">
+<div id="slots"></div>
+Switch every <select name="interval"><option value="5">5 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select><br>
+<button>Save names</button>
+<button type="button" onclick="document.querySelectorAll('#rot input[type=text]').forEach(function(i){i.value=''})">Clear all boxes</button><br>
+<small>Blank boxes are skipped; one name just stays on that name. Rotation pauses while anything is connected to the device, so you can still use this page. Max 32 characters each. &ldquo;Clear all boxes&rdquo; only empties the boxes: press Save names to keep it.</small></form></details>
+
+<h2>Buzzer</h2>
+<div class="card"><label class="sw"><input type="checkbox" id="buz" onchange="setBuzzer(this)" checked><span class="sl"></span></label><span id="buzLbl">Buzzer is ON</span><br>
+<button type="button" onclick="demoTestSound()">Test sound</button>
+<br><small>When ON, the tune plays on every wi-fi-roll.</small>
+<form method="POST" action="/admin/tune" style="margin-top:10px">
+<label class="v"><input type="radio" name="tune" value="0" checked> Rising chime</label>
+<label class="v"><input type="radio" name="tune" value="1"> Simple triad</label>
+<label class="v"><input type="radio" name="tune" value="2"> Descending run</label>
+<label class="v"><input type="radio" name="tune" value="3"> Custom</label>
+<input type="text" name="notes" maxlength="40" placeholder="e.g. cdfda ag" value="cdfda ag cdfdg gf "><br>
+<small>Notes: c d e f g a b, a capital C for one note higher, and a space for a brief pause. Each letter is one beat.</small><br>
+Tempo <input type="number" name="tempo" min="60" max="400" step="5" value="125"> ms per beat (lower = faster)<br>
+<button>Save tune</button></form></div>
+
+<h2>Admin login</h2>
+<form class="card" method="POST" action="/admin/login">
+<small style="color:#f5b041">Login is OFF - anyone on this Wi-Fi can open this page. Set a username and password.</small><br>
+<input type="text" name="user" maxlength="32" placeholder="Username" autocomplete="off" value="">
+<input type="password" name="pass" maxlength="32" placeholder="Password" autocomplete="new-password">
+<input type="password" name="pass2" maxlength="32" placeholder="Repeat password" autocomplete="new-password">
+<button>Save login</button></form>
+
+<h2>Annoy-a-tron <small style="color:#f5b041">(experimental)</small></h2>
+<form class="card" method="POST" action="/admin/annoy">
+<small style="color:#f5b041">Uses light sleep (radio off, CPU still running) between beeps rather than deep sleep, so it needs no extra wiring, but saves less power - test your battery life before relying on it for long unattended runs.</small><br>
+Minimum <input type="number" name="amin" min="5" max="86400" value="60"> and maximum <input type="number" name="amax" min="5" max="86400" value="300"> seconds between beeps<br>
+<small>In seconds - 300 = 5 minutes, 3600 = 1 hour. One beep happens at a random point in that range, then it picks a new random wait and does it again. Uses whichever tune is set above.</small><br>
+<button>Save timing</button></form>
+
+<script>
+// 30 rotation name boxes, 3 filled in as examples
+(function () {
+  var examples = ['Free WiFi', 'Totally Not A Virus', 'FBI Surveillance Van'];
+  var html = '';
+  for (var i = 0; i < 30; i++) {
+    html += '<input type="text" name="n' + i + '" maxlength="32" placeholder="Name ' + (i + 1) +
+            ' (blank = skip)" value="' + (examples[i] || '') + '">';
+  }
+  document.getElementById('slots').innerHTML = html;
+})();
+</script>
+<script src="demo.js"></script>
+</body></html>

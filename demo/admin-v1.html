@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wi-Fi-Roll Admin (Version 1 demo)</title>
+<link rel="stylesheet" href="admin.css">
+</head><body>
+<h1>Wi-Fi-Roll Admin</h1>
+<div class="demo-note">Demo: nothing here is connected to a real device.</div>
+
+<h2>Stats</h2>
+<div class="stats"><div><b id="s">3</b><span>this session</span></div><div><b id="l">27</b><span>lifetime</span></div></div>
+<form method="POST" action="/admin/reset" onsubmit="return confirm('Reset session and lifetime counts to zero?')">
+<button class="red">Reset stats</button></form>
+
+<h2>Buzzer</h2>
+<div class="card"><label class="sw"><input type="checkbox" id="buz" onchange="setBuzzer(this)" checked><span class="sl"></span></label><span id="buzLbl">Buzzer is ON</span><br>
+<button type="button" onclick="demoTestSound()">Test sound</button>
+<br><small>When ON, the tune plays on every wi-fi-roll.</small></div>
+
+<h2>Network name (SSID)</h2>
+<form class="card" method="POST" action="/admin/ssid">
+<input type="text" name="ssid" maxlength="32" value="Free WiFi"><button>Save &amp; restart network</button><br>
+<small>Phones will drop off; reconnect to the new name and reload this page.</small></form>
+
+<h2>Admin login</h2>
+<form class="card" method="POST" action="/admin/login">
+<small style="color:#f5b041">Login is OFF - anyone on this Wi-Fi can open this page. Set a username and password.</small><br>
+<input type="text" name="user" maxlength="32" placeholder="Username" autocomplete="off" value="">
+<input type="password" name="pass" maxlength="32" placeholder="Password" autocomplete="new-password">
+<input type="password" name="pass2" maxlength="32" placeholder="Repeat password" autocomplete="new-password">
+<button>Save login</button></form>
+
+<h2>Prank video</h2>
+<form class="card" method="POST" action="/admin/video">
+<label class="v"><input type="radio" name="video" value="Rickroll.mp4" checked> Rickroll.mp4 <small>812 KB &middot; active</small></label>
+<label class="v"><input type="radio" name="video" value="Nyan.mp4"> Nyan.mp4 <small>640 KB</small></label>
+<button>Use selected</button>
+<button class="red" formaction="/admin/delete" onclick="return confirm('Delete the selected video?')">Delete selected</button>
+</form>
+
+<h2>Add a video</h2>
+<form class="card" method="POST" action="/admin/upload" enctype="multipart/form-data">
+<input type="file" name="f" accept="video/mp4,.mp4">
+<button>Upload</button><br>
+<small>.mp4 only, short filename. Small works best: ~320x180, 15 fps, H.264 + AAC mono.</small></form>
+
+<p><small>Storage: 1480 KB used of 1944 KB</small></p>
+
+<script src="demo.js"></script>
+</body></html>
