@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wi-Fi-Roll - Web UI Demo</title>
+<style>
+:root { color-scheme: dark; }
+body {
+  font-family: monospace;
+  background: #111;
+  color: #eee;
+  margin: 0;
+  padding: 24px 16px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+h1 { text-align: center; margin: 0 0 6px; }
+p.sub {
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto 20px;
+  line-height: 1.5;
+  color: #aaa;
+}
+.nav { margin-bottom: 24px; font-size: 13px; }
+.nav a { color: #9cf; text-decoration: none; }
+.nav a:hover, .nav a:focus-visible { color: #fff; text-decoration: underline; outline: none; }
+
+.tabs { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+.tab {
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 10px 18px;
+  color: #eee;
+  font-family: monospace;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tab:hover, .tab:focus-visible { border-color: #3a7bd5; outline: none; }
+.tab[aria-selected="true"] { background: #3a7bd5; border-color: #3a7bd5; color: #fff; font-weight: bold; }
+.views .tab { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+
+.blurb { max-width: 440px; text-align: center; color: #aaa; font-size: 12px; line-height: 1.5; min-height: 3.6em; margin-bottom: 12px; }
+
+.frame {
+  width: 100%;
+  max-width: 420px;
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.frame iframe {
+  display: block;
+  width: 100%;
+  height: 720px;
+  max-height: 75vh;
+  border: 0;
+  background: #111;
+}
+.open { margin-top: 14px; font-size: 13px; }
+.open a { color: #9cf; text-decoration: none; }
+.open a:hover, .open a:focus-visible { color: #fff; text-decoration: underline; outline: none; }
+
+footer { margin-top: 40px; font-size: 11px; text-align: center; max-width: 400px; line-height: 1.5; color: #999; }
+</style>
+</head>
+<body>
+
+<h1>Web UI Demo</h1>
+<p class="sub">Try the device's web pages right here. This is a demo, so nothing is connected to a real device and nothing is saved.</p>
+<div class="nav"><a href="index.html">&larr; Back to menu</a></div>
+
+<div class="tabs" id="tabs" role="tablist"></div>
+<div class="tabs views" id="views" role="tablist"></div>
+<div class="blurb" id="blurb"></div>
+<div class="frame">
+  <iframe id="demo" title="Web UI demo" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+</div>
+<div class="open"><a id="full" href="#" target="_blank" rel="noopener">Open full size &rarr;</a></div>
+
+<footer>Wi-Fi-Roll by nilltronic.</footer>
+
+<script>
+(function () {
+  // ---- Edit these to match your two versions -----------------------------
+  var VERSIONS = [
+    {
+      label: 'Version 1',
+      desc: 'The original: captive portal with a Continue button that plays your video, plus an admin page for the network name, stats, buzzer, login and video upload.',
+      portal: 'demo/portal.html?v=1',
+      admin:  'demo/admin-v1.html'
+    },
+    {
+      label: 'Version 2',
+      desc: 'Adds modes (video prank, SSID rotation, experimental modes), random/rotating videos, editable portal text, tune choice and annoy-a-tron timing.',
+      portal: 'demo/portal.html?v=2',
+      admin:  'demo/admin-v2.html'
+    }
+  ];
+  var VIEWS = [
+    { key: 'portal', label: 'Captive portal' },
+    { key: 'admin',  label: 'Admin page' }
+  ];
+  // -------------------------------------------------------------------------
+
+  var tabs = document.getElementById('tabs');
+  var viewsEl = document.getElementById('views');
+  var frame = document.getElementById('demo');
+  var blurb = document.getElementById('blurb');
+  var full = document.getElementById('full');
+  var vBtns = [], wBtns = [];
+  var cur = 0, view = 'portal';
+
+  function show() {
+    var v = VERSIONS[cur];
+    var file = v[view];
+    frame.src = file;
+    blurb.textContent = v.desc || '';
+    full.href = file;
+    vBtns.forEach(function (b, j) { b.setAttribute('aria-selected', j === cur ? 'true' : 'false'); });
+    wBtns.forEach(function (b, j) { b.setAttribute('aria-selected', VIEWS[j].key === view ? 'true' : 'false'); });
+    try { history.replaceState(null, '', '#v' + (cur + 1) + '-' + view); } catch (e) {}
+  }
+
+  VERSIONS.forEach(function (v, i) {
+    var b = document.createElement('button');
+    b.className = 'tab'; b.type = 'button'; b.setAttribute('role', 'tab');
+    b.textContent = v.label;
+    b.addEventListener('click', function () { cur = i; show(); });
+    tabs.appendChild(b); vBtns.push(b);
+  });
+  VIEWS.forEach(function (w) {
+    var b = document.createElement('button');
+    b.className = 'tab'; b.type = 'button'; b.setAttribute('role', 'tab');
+    b.textContent = w.label;
+    b.addEventListener('click', function () { view = w.key; show(); });
+    viewsEl.appendChild(b); wBtns.push(b);
+  });
+
+  // Links like demo.html#v2-admin open that version and view directly
+  var m = /^#v(\d+)(?:-(portal|admin))?$/.exec(location.hash);
+  if (m) {
+    cur = Math.min(Math.max(parseInt(m[1], 10) - 1, 0), VERSIONS.length - 1);
+    if (m[2]) view = m[2];
+  }
+  show();
+})();
+</script>
+</body>
+</html>
